@@ -1,0 +1,13 @@
+[Unit]
+Description=Matrix Notifikator Service
+
+[Service]
+WorkingDirectory=/srv/matrix-notifikator/
+ExecStart=/usr/bin/python3 listener.py -c /etc/matrix-notifikator.ini
+User=notifikator
+Group=notifikator
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
