@@ -55,11 +55,7 @@ class Komunikator:
 
     def send_message(self, message, room_name):
         try:
-<<<<<<< HEAD
             self.rooms[room_name].send_html(message)
-=======
-            self.room.send_html(message)
->>>>>>> cff4ac1699c4f58906e50c44bdc2fd683aca3f9a
         except MatrixRequestError as e:
             print('{0} Retrying...'.format(e))
             self.connect()
