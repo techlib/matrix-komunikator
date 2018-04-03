@@ -1,3 +1,7 @@
 config/config-production.ini
 .vscode
+<<<<<<< HEAD
 venv
+=======
+venv
+>>>>>>> cff4ac1699c4f58906e50c44bdc2fd683aca3f9a
