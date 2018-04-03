@@ -4,6 +4,7 @@ import zmq
 import click
 import sys
 import os
+import json
 
 from configparser import ConfigParser
 
@@ -12,12 +13,14 @@ from matrix_client.api import MatrixRequestError
 from requests.exceptions import MissingSchema
 
 class Komunikator:
-    def __init__(self, username, password, room_name, client):
+    def __init__(self, username, password, room_names, client):
         self. username = username
         self.password = password
-        self.room_name = room_name
+        self.room_names = []
+        for room_name in room_names.split(','):
+            self.room_names.append(room_name.strip())
         self.client = client
-        self.room = None
+        self.rooms = {}
 
     def connect(self):
         try:
@@ -37,26 +40,26 @@ class Komunikator:
             print("Bad URL format.")
             print(e)
             sys.exit(3)
+        for room_name in self.room_names:
+            try:
+                self.rooms[room_name] = self.client.join_room(room_name)
 
+            except MatrixRequestError as e:
+                print(e)
+                if e.code == 400:
+                    print("Room ID/Alias in the wrong format")
+                    sys.exit(11)
+                else:
+                    print("Couldn't find room.")
+                    sys.exit(12)
+
+    def send_message(self, message, room_name):
         try:
-            self.room = self.client.join_room(self.room_name)
-
-        except MatrixRequestError as e:
-            print(e)
-            if e.code == 400:
-                print("Room ID/Alias in the wrong format")
-                sys.exit(11)
-            else:
-                print("Couldn't find room.")
-                sys.exit(12)
-
-    def send_message(self, message):
-        try:
-            self.room.send_text(message)
+            self.rooms[room_name].send_html(message)
         except MatrixRequestError as e:
             print('{0} Retrying...'.format(e))
             self.connect()
-            self.send_message(message)
+            self.send_message(message, room_name)
                 
 
 
@@ -70,7 +73,7 @@ def listen(config):
     ini.read_file(config)
     komunikator = Komunikator(
         ini.get('matrix', 'username'), ini.get('matrix', 'password'), 
-        ini.get('matrix', 'room'), MatrixClient(ini.get('matrix', 'server')))
+        ini.get('matrix', 'rooms'), MatrixClient(ini.get('matrix', 'server')))
     komunikator.connect()
     context = zmq.Context()
     socket = context.socket(zmq.ROUTER)
@@ -78,8 +81,9 @@ def listen(config):
     socket.bind('ipc:///tmp/matrix-relay.sock')
 
     while True:
-        sender, message = socket.recv_multipart()
-        komunikator.send_message(message.decode('utf8'))
+        _, message = socket.recv_multipart()
+        recieved = json.loads(message.decode('utf8'))
+        komunikator.send_message(recieved['message'], recieved['room'])
 
 if __name__ == '__main__':
     listen()

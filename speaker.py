@@ -2,6 +2,7 @@
 
 import zmq
 import click
+import json
 
 #import os.path
 #from sys import exit
@@ -9,8 +10,10 @@ import click
 @click.command()
 @click.option('--message', '-m', default='dummy text',
               help='Send message to matrix.')
-@click.version_option('0.1.0')
-def speak(message):
+@click.option('--room', '-r', default='#zabbix:techlib.cz',
+              help='Room to send message to.')
+@click.version_option('0.1.1')
+def speak(message, room):
     '''
     uncomment following lines and imports if you want to 
     detect existence of socket on client side
@@ -23,7 +26,9 @@ def speak(message):
     socket = context.socket(zmq.DEALER)
     socket.setsockopt(zmq.LINGER, 2000)
     socket.connect('ipc:///tmp/matrix-relay.sock')
-    socket.send_multipart([message.encode('utf8')])
+    outgoing = {'message':message, 'room': room}
+    out_js = json.dumps(outgoing)
+    socket.send_multipart([out_js.encode('utf8')])
 
 if __name__ == '__main__':
     speak()
